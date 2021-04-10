@@ -1,0 +1,53 @@
+//Test for Xenon - Cesar Code
+
+
+alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+ 				"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+
+codenumber = 13
+
+//Helper function to know the alphabetical number of a character
+fun getalphabetindex(c){
+	foreach (char, i in alphabet){
+		if (c == char){
+			return i
+		}
+	}
+	return -1
+}
+
+//Encode with the cesar code
+fun encode(str){
+	newstr = ""
+	foreach (i in range(len(str))){
+		index = getalphabetindex(str[i])
+		if (index != -1){
+			newstr += alphabet[(index + codenumber) % alphabet.size()]
+		}
+		else{
+			newstr += str[i]
+		}
+	}
+	return newstr
+}
+
+//Decode with the cesar code
+fun decode(str){
+	newstr = ""
+	foreach (i in range(len(str))){
+		index = getalphabetindex(str[i])
+		if (index != -1){
+			newstr += alphabet[(index - codenumber) % alphabet.size()]
+		}
+		else{
+			newstr += str[i]
+		}
+	}
+	return newstr
+}
+
+//Function to get certain input
+fun getInput(message){
+	print(message)
+	return input()
+}

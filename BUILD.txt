@@ -1,0 +1,16 @@
+                      BUILD
+
+To build the project:
+1 - Open the folder 'Xenon' as a project in Eclipse
+2 - Ensure that the plugin for JavaCC is installed
+3 - In Eclipse, open the package 'src/xenon.parser'
+4 - Right click in 'Xenon.jjt' and select 'Compile with javacc | jjtree | jtb'
+
+Now the project is built. To create a 'jar' file:
+
+5 - Right click on the 'Xenon' project folder and select export
+6 - Select JAR file
+7 - Select the destination folder (Build folder for example)
+8 - Click 'next' two times
+9 - In 'Main class' select 'Interpreter'
+10 - Select 'Finish'

@@ -1,0 +1,334 @@
+//Test for Xenon - Neural Network
+//I followed this book: Neural Networks and Deep Learning by Michael Nielsen (http://neuralnetworksanddeeplearning.com)
+
+//Apply the sigmoid function to a vector
+fun sigmoidvector(z){
+	newz = new vector(z.size())
+	foreach (e, i in z) {
+		newz[i] = 1.0 / (1.0 + pow(constE, -e))
+	}
+	return newz
+}
+
+//Apply the sigmoid prime function to a vector
+fun sigmoidprime(z){
+	sig = sigmoidvector(z)
+	sigminus = new vector(z.size())
+	foreach (i in range(z.size())){
+		sigminus[i] = 1.0 - sig[i]
+	}
+	newz = vectormult(sig, sigminus)
+
+	return newz
+}
+
+//Get a vector with random values
+fun randomvector(size){
+	v = new vector(size)
+	foreach (i in range(size)){
+		v[i] = rand(-0.1, 0.1)
+	}
+	return v
+}
+
+//Get a vector of ceros
+fun cerovector(size){
+	v = new vector(size)
+	foreach (i in range(size)){
+		v[i] = 0.0
+	}
+	return v
+}
+
+//Return the index with the maximum value
+fun argmax(vect){
+	index = 0
+	max = 0
+	foreach (e, i in vect){
+		if (e > max){
+			index = i
+			max = e
+		}
+	}
+	return index
+}
+
+class Network{
+	fun init(sizes){
+		this.numlayers = sizes.size()
+		this.sizes = sizes
+
+		//Initalize nablab and nablaw to random values
+		this.biases = new vector(sizes.size() - 1)
+		foreach (size, i in sizes[1, sizes.size()]) {
+			biases[i] = randomvector(size)
+		}
+		this.weights = new vector(sizes.size() - 1)
+		foreach (i in range(sizes.size() - 1)) {
+			v = new vector(sizes[i + 1])
+			foreach(j in range(sizes[i + 1])) {
+				v[j] = randomvector(sizes[i])
+			}
+			this.weights[i] = v
+		}
+	}
+
+	fun SGD(training, epochs, minibatchsize, eta, testdata) {
+		n = training.size()
+		foreach (j in range(epochs)){
+			training.shuffle()
+			minibatches = new vector
+			foreach(i in range(n / minibatchsize)) {
+				k = i * minibatchsize
+				minibatches.add(training[k, k + minibatchsize])
+			}
+
+			foreach (minibatch, mi in minibatches){
+				updateminibatch(minibatch, eta)
+			}
+
+			results = evaluate(testdata)
+			print ("Epoch {" + j + "} " + results + "/" + testdata.size() + " " + (float(results) / testdata.size() * 100) + " %")
+		}
+	}
+
+	fun feedforward(a){
+		a = a.clone()
+		foreach (i in range(biases.size())) {
+			b = biases[i]
+			w = weights[i]
+
+			a = sigmoidvector(vectoradd(matrixvectordot(w, a), b))
+		}
+		return a
+	}
+
+	fun updateminibatch(minibatch, eta){
+
+		//Initalize nablab and nablaw to 0
+		nablab = new vector(sizes.size() - 1)
+		foreach (size, i in sizes[1, sizes.size()]) {
+			nablab[i] = cerovector(size)
+		}
+
+		nablaw = new vector(sizes.size() - 1)
+		foreach (i in range(sizes.size() - 1)) {
+			v = new vector(sizes[i + 1])
+			foreach(j in range(sizes[i + 1])) {
+				v[j] = cerovector(sizes[i])
+			}
+			nablaw[i] = v
+		}
+
+		//Calculate the nablas
+		foreach (case, i in minibatch){
+			deltas = backprop(case[0], case[1])
+			deltab = deltas[0]
+			deltaw = deltas[1]
+
+			foreach(j in range(nablab.size())){
+				nablab[j] = vectoradd(nablab[j], deltab[j])
+			}
+
+			foreach(j in range(nablaw.size())){
+				foreach(k in range(nablaw[j].size())){
+					nablaw[j][k] = vectoradd(nablaw[j][k], deltaw[j][k])
+				}
+			}
+		}
+
+		foreach (i in range(sizes.size() - 1)) {
+			biases[i] = vectorsub(biases[i], vectorscale(nablab[i], (float(eta) / minibatch.size())))
+		}
+
+		foreach (i in range(sizes.size() - 1)) {
+			v = new vector(sizes[i + 1])
+			foreach(j in range(sizes[i + 1])) {
+				v[j] = vectorsub(weights[i][j], vectorscale(nablaw[i][j], (float(eta) / minibatch.size())))
+			}
+			weights[i] = v
+		}
+	}
+
+	fun backprop(x, y){
+
+		//Initalize nablab and nablaw to 0
+		nablab = new vector(sizes.size() - 1)
+		foreach (size, i in sizes[1, sizes.size()]) {
+			nablab[i] = cerovector(size)
+		}
+
+		nablaw = new vector(sizes.size() - 1)
+		foreach (i in range(sizes.size() - 1)) {
+			v = new vector(sizes[i + 1])
+			foreach(j in range(sizes[i + 1])) {
+				v[j] = cerovector(sizes[i])
+			}
+			nablaw[i] = v
+		}
+
+
+		//Feedforward
+		activation = x
+		activations = [x]
+		zs = []
+		foreach (i in range(biases.size())) {
+			b = biases[i]
+			w = weights[i]
+
+			z = vectoradd(matrixvectordot(w, activation), b)
+			zs.add(z)
+			activation = sigmoidvector(z)
+			activations.add(activation)
+		}
+		//Backward
+		delta = vectormult(costderivative(activations[-1], y), sigmoidprime(zs[-1]))
+		nablab[-1] = delta
+
+		//delta dot activations Transpose
+		foreach(i in range(delta.size())){
+			nablaw[-1][i] = vectorscale(activations[-2], delta[i])
+		}
+
+		foreach (l in range(2, numlayers)){
+			z = zs[-l]
+			sp = sigmoidprime(z)
+
+			//weights[-l + 1] Transpose dot delta
+			newdelta = new vector(sizes[-l])
+			foreach(i in range(sizes[-l])){
+				sum = 0.0
+				foreach(j in range(sizes[-l + 1])){
+					sum += weights[-l + 1][j][i] * delta[j]
+				}
+				newdelta[i] = sum
+			}
+
+			delta = vectormult(newdelta, sp)
+
+			nablab[-l] = delta
+			//delta dot activations Transpose
+			foreach(i in range(delta.size())){
+				nablaw[-l][i] = vectorscale(activations[-l-1], delta[i])
+			}
+		}
+
+		return [nablab, nablaw]
+	}
+
+	fun evaluate(testdata){
+		sum = 0
+		foreach (case in testdata){
+			result = argmax(feedforward(case[0]))
+			//print("predicted: " + result + " y: " + argmax(case[1]))
+			sum += int(result == argmax(case[1]))
+		}
+		return sum
+	}
+
+	fun costderivative(outputactivations, y){
+		return vectorsub(outputactivations, y)
+	}
+}
+
+//Simply convert a vector to float in range 0-1
+fun vectortofloat(v, normalizefactor){
+	foreach (e, i in v){
+		v[i] = float(e) / normalizefactor
+	}
+}
+
+fun loadData(datapath, trainingnumber, testnumber){
+	f = new file(datapath)
+
+	training = new vector
+	test = new vector
+	limit = trainingnumber + testnumber
+	line = f.readline()
+	i = 0
+	while(line != null AND i < limit){
+		datapart = split(line, "|")
+		//labels
+		newlabel = split(datapart[0], " ")
+		newlabel.remove(0)
+		vectortofloat(newlabel, 1)
+
+		//data
+		newdata = split(datapart[1], " ")
+		newdata.remove(0)
+		vectortofloat(newdata, 255)
+
+		i++
+		line = f.readline()
+
+		if (i <= trainingnumber) {
+			training.add( [newdata, newlabel] )
+		}
+		else{
+			test.add( [newdata, newlabel] )
+		}
+	}
+	f.close()
+
+	return [training, test]
+}
+
+//Print a number of the data
+fun printdata(data){
+	line = ""
+	foreach (i in range(data.size())){
+		if (i % 28 == 0){
+			print(line)
+			line = ""
+		}
+
+		if (data[i] > 0.5){
+			line += "O"
+		}
+		else if (data[i] > 0){
+			line += "o"
+		}
+		else{
+			line += " "
+		}
+	}
+	print(line)
+}
+
+fun main(){
+
+	print("We are going to try to catalog the Mnist data. This is a collection of handwritten number.")
+	print("Our neural network will learn to discriminate the numbers and predict them.")
+	print("It is going to be a really simple neural network and we will only use a fragment of the data.")
+	print(newline)
+
+	N = 28 * 28
+	HiddenLayer = 15
+	Epochs = 10
+
+	datalist = loadData("./Examples/Data/Mnist.txt", 1000, 100)
+	training = datalist[0]
+	test = datalist[1]
+
+	print("Training size: " + training.size() + " x "+ training[0][0].size())
+	print("Test size: " + test.size() + " x "+ test[0][0].size())
+
+	//Try number 10
+	print("This is an example of the numbers:")
+	number = irand(training.size())
+	printdata(training[number][0])
+	print("This is a: " + argmax(training[number][1]) + newline)
+
+	print("Creating the neural network with " + HiddenLayer + " neurons in the hidden layer")
+	network = new Network([N, HiddenLayer, 10])
+	results = network.evaluate(test)
+	print ("Results with the random start: " + results + "/" + test.size() + " " + (float(results) / test.size() * 100) + " %")
+	print("Starting the training, this will take a few minutes, be patient. Number of epochs: " + Epochs)
+	network.SGD(training, Epochs, 10, 3, test)
+
+	print(newline + "The training is finished")
+
+	results = network.evaluate(test)
+	print ("This is the final result: " + results + "/" + test.size() + " " + (float(results) / test.size() * 100) + " %")
+	print("Isn't it cool? :)")
+}

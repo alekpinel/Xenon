@@ -1,0 +1,230 @@
+
+class Card{
+    name = "intialname"
+    fun init(name, description, action){
+        this.name = name
+        this.desc = description
+        this.setmethod(action, "action")
+    }
+
+    fun tostring(){
+        return str(name) + ": " + desc
+    }
+}
+
+class Character {
+    fun init(name, maxlife){
+        this.name = name
+        this.maxHP = maxlife
+        this.HP = this.maxHP
+        this.cards = new vector
+        this.block = 0
+        this.strengh = 0
+    }
+
+    fun attack(enemy, damage) {
+        enemy.takeDamage(damage + strengh)
+    }
+
+    fun takeDamage(d){
+        newdefend = block - d
+        if (newdefend < 0){
+            HP = HP - d + block
+            block = 0
+        }
+        else{
+            block = newdefend
+        }
+
+        if (HP < 0){
+            HP = 0
+        }
+    }
+
+    fun addblock(b){
+        block = block + b
+    }
+
+    fun increaseStrengh(s){
+        strengh = strengh + s
+    }
+
+    fun addCard(card){
+        cards.add(card)
+    }
+
+    fun randomMove(){
+        return cards[irand(cards.size())]
+    }
+
+    fun tostring(){
+        name + " " + HP + " HP " + block + " block " + strengh + " strengh "
+    }
+}
+
+Class Player (Character) {
+	fun init(name, maxlife){
+        this.name = name
+        this.maxHP = maxlife
+        this.HP = this.maxHP
+        this.cards = new vector
+        this.block = 0
+        this.strengh = 0
+        this.energy = 0
+    }
+
+    fun endCombat(){
+        block = 0
+        strengh = 0
+        energy = 0
+    }
+
+    fun setPlayerInitialCards(){
+        foreach (i in range(5)){
+            cards.add(cardsDatabase["Strike"].clone())
+        }
+        foreach (i in range(4)){
+            cards.add(cardsDatabase["Defend"].clone())
+        }
+        cards.add(cardsDatabase["Flex"].clone())
+    }
+}
+
+
+
+//We create a database of all the cards of the game
+cardsDatabase = new map
+fun CreateCards(){
+    //Player cards
+    cardsDatabase.set("Strike", new Card("Strike", "Deal 6 damage", lambda : (owner, enemy) { owner.attack(enemy, 6) }))
+    cardsDatabase.set("Defend", new Card("Defend", "Gain 5 of block", lambda : (owner, enemy) { owner.addblock(5) }))
+    cardsDatabase.set("Flex", new Card("Flex", "Gain 1 of strengh", lambda : (owner, enemy) { owner.increaseStrengh(1) }))
+    //Enemy cards
+    cardsDatabase.set("Chomp", new Card("Chomp", "Deal 11 damage", lambda : (owner, enemy) { owner.attack(enemy, 11) }))
+    cardsDatabase.set("Thrash", new Card("Thrash", "Deal 7 damage, gain 5 Block", lambda : (owner, enemy) { owner.attack(enemy, 7) owner.addblock(5) }))
+    cardsDatabase.set("Bellow", new Card("Bellow", "Gain 3 Strength and 6 Block", lambda : (owner, enemy) { owner.increaseStrengh(3) owner.addblock(6) }))
+
+    cardsDatabase.set("Incantation", new Card("Incantation", "Gain 6 Strengh", lambda : (owner, enemy) { owner.increaseStrengh(6) }))
+}
+
+enemiesDatabase = new randomqueue
+fun CreateEnemies(){
+    //Jaw Worm
+    enemy = new Character("Jaw Worm", 40)
+    enemy.addCard(cardsDatabase["Chomp"].clone())
+    enemy.addCard(cardsDatabase["Thrash"].clone())
+    enemy.addCard(cardsDatabase["Bellow"].clone())
+    enemiesDatabase.push(enemy)
+    //Cultist
+    enemy2 = new Character("Cultist", 50)
+    enemy2.addCard(cardsDatabase["Strike"].clone())
+    enemy2.addCard(cardsDatabase["Incantation"].clone())
+    enemiesDatabase.push(enemy2)
+}
+
+fun Battle(player, enemy){
+    finished = false
+    fun CheckFinished(){
+        finished = player.HP <= 0 OR enemy.HP <= 0
+    }
+
+    deck = new randomqueue(player.cards)
+    hand = new vector
+    used = new queue
+
+    win = false
+    turn = 0
+    while(not finished){
+        turn++
+        print(newline + "Turn " + turn + newline)
+        print("The enemy " + enemy.name + " movement is going to be: ")
+        enemymovement = enemy.randomMove()
+        print(enemymovement)
+
+        foreach (i in range(5)){
+            if (deck.size() <= 0) {
+                print("Shuffling deck")
+                deck.pushcol(used)
+            }
+
+            hand.add(deck.pop())
+        }
+
+        //Player Turn
+        player.energy = 3
+        player.block = 0
+
+        enemyturn = false
+        while (not enemyturn){
+            print(player)
+            print(enemy)
+            print("Energy: " + player.energy + " Enter the number of your move or -1 to pass: ")
+            print("Deck :" + deck.size() + " Used Card: " + used.size() + " Hand: ")
+            foreach (card, i in hand){
+                print(str(i) + ": " + card)
+            }
+
+            move = -100
+            while (move < -1 OR move >= hand.size()){
+               move = int(input())
+            }
+
+
+            if (move == -1){
+                enemyturn = true
+            }
+            else{
+                card = hand[move]
+                print("Chosen " + move + " " + card)
+                player.energy--
+                card.action(player, enemy)
+                used.push(hand.remove(move))
+                CheckFinished()
+
+                enemyturn = finished or player.energy <= 0 or hand.size() == 0
+            }
+        }
+
+        used.pushcol(hand)
+        hand.clear()
+
+        CheckFinished()
+
+        if (not finished){
+            print("Enemy does: " + enemymovement)
+            enemy.block = 0
+            enemymovement.action(enemy, player)
+        }
+
+        CheckFinished()
+    }
+
+    if (player.HP <= 0){
+        win = false
+        print("YOU LOSE!!!")
+    }
+    if (enemy.HP <= 0){
+        win = true
+        print("YOU WIN!!!")
+        player.endCombat()
+    }
+    print(player)
+    print(enemy)
+
+    return win
+}
+
+fun main(){
+    CreateCards()
+    CreateEnemies()
+
+    print("Welcome to this shabby imititation of Slay the Spire")
+    print("Introduce your name: ")
+    name = input()
+    player = new Player(name, 50)
+    player.setPlayerInitialCards()
+    while (player.HP > 0){
+        enemy = enemiesDatabase.takerandom().clone()
+        Battle(player, enemy)
+    }
+}

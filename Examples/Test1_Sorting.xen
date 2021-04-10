@@ -1,0 +1,112 @@
+//Test for Xenon - Sorting Algorithms
+
+//Sorting by selection
+fun selectionSort(v){
+	for (i = 0; i < v.size(); i++){
+		min = v[i]
+		pos_min = i
+		for (j = i; j < v.size(); j++){
+			if (v[j] < min){
+				min = v[j]
+				pos_min = j
+			}
+		}
+
+		v[pos_min] = v[i]
+		v[i] = min
+	}
+	return v
+}
+
+//Sorting by insertion
+fun insertionSort(v){
+	for (i = 1; i < v.size(); i++){
+		for (j = i; j > 0 AND v[j] < v[j - 1]; j--){
+			aux = v[j]
+			v[j] = v[j-1]
+			v[j-1] = aux
+		}
+	}
+	return v
+}
+
+//Sorting by bubble sort
+fun bubbleSort(v){
+	sorted = false
+	for (i = 0; i < v.size() AND NOT sorted; i++){
+		sorted = true
+		for (j = v.size() - 1; j > i; j--){
+			if (v[j] < v[j - 1]) {
+				aux = v[j]
+				v[j] = v[j-1]
+				v[j-1] = aux
+				sorted = false
+			}
+		}
+	}
+	return v
+}
+
+fun quickSort(v){
+	return quickSort(v, 0, v.size() - 1)
+}
+
+fun quickSort(v, left, right){
+	if (left < right){
+		pivot = divideByPivot(v, left, right)
+		quickSort(v, left, pivot - 1)
+		quickSort(v, pivot + 1, right)
+	}
+	return v
+}
+
+fun divideByPivot(v, left, right){
+	//The pivot is the last element
+	pivot = v[right]
+
+	i = left - 1
+
+	foreach (j in range(left, right)) {
+		if (v[j] < pivot) {
+			i++
+			aux = v[j]
+			v[j] = v[i]
+			v[i] = aux
+		}
+	}
+	aux = v[right]
+	v[right] = v[i+1]
+	v[i+1] = aux
+
+	return i+1
+}
+
+
+fun main(){
+
+	N = 16
+
+	original = new vector(N)
+
+	for (i = 0; i < N; i++){
+		original[i] = irand(10, 100)
+	}
+
+	print("Original vector: " + original)
+
+	sorted = original.clone()
+	sorted.sort()
+	print("Sorted:          " + sorted)
+
+	selection = selectionSort(original.clone())
+	print("Selection Sort:  " + selection)
+
+	insertion = insertionSort(original.clone())
+	print("Insertion Sort:  " + insertion)
+
+	bubble = bubbleSort(original.clone())
+	print("Bubble Sort:     " + bubble)
+
+	quicksort = quickSort(original.clone())
+	print("QuickSort:       " + quicksort)
+}

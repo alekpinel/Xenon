@@ -1,0 +1,106 @@
+//Test for Xenon - Game of Life
+//In memory of John Horton Conway
+
+class Game{
+	chardead = "-"
+	charalive = "*"
+	def _map
+	def _nrows
+	def _ncols
+
+	fun LoadMap(filename){
+		f = new file(filename)
+
+		line = f.readline()
+		_ncols = len(line)
+		_map = new vector
+		_nrows = 0
+		while (line != null){
+			mappart = new vector(_ncols)
+			foreach (i in range(_ncols)){
+				if (line[i] == chardead){
+					mappart[i] = false
+				}
+				else if (line[i] == charalive){
+					mappart[i] = true
+				}
+				else {
+					print("Cannot read: " + line[i])
+					quit()
+				}
+			}
+			_map.add(mappart)
+			_nrows++
+
+			line = f.readline()
+		}
+		f.close()
+	}
+
+	fun tostring(){
+		str = ""
+		foreach (row in _map){
+			foreach (e in row){
+				if (e){
+					str += charalive
+				}
+				else{
+					str += chardead
+				}
+			}
+			str += newline
+		}
+		return str
+	}
+
+	fun PassTurn() {
+		newmap = new vector(_nrows, _ncols)
+		foreach (x in range(_nrows)){
+			foreach (y in range(_ncols)){
+				neighbors = int(_map[(x - 1) % _nrows][(y - 1) % _ncols]) + _map[(x - 1) % _nrows][y] + _map[(x - 1) % _nrows][(y + 1) % _ncols]
+					+ _map[x][(y - 1) % _ncols] + _map[x][(y + 1) % _ncols]
+					+ _map[(x + 1) % _nrows][(y - 1) % _ncols] + _map[(x + 1) % _nrows][y] + _map[(x + 1) % _nrows][(y + 1) % _ncols]
+				//If it is alive
+				if (_map[x][y]){
+					if (neighbors >= 2 AND neighbors <= 3){
+						newmap[x][y] = true
+					}
+					else{
+						newmap[x][y] = false
+					}
+				}
+				//If it is dead
+				else {
+					if (neighbors == 3){
+						newmap[x][y] = true
+					}
+					else{
+						newmap[x][y] = false
+					}
+				}
+			}
+		}
+		_map = newmap
+	}
+}
+
+
+
+
+fun main(){
+	game = new Game
+	mapfile = "./Examples/Data/life01.txt"
+	print("Loading map from " + mapfile)
+	game.LoadMap(mapfile)
+
+	inp = ""
+	while(inp != "quit") {
+		print("Game of life - John Conway" + newline)
+		print(str(game) + newline)
+		print("Press enter to continue, quit to exit")
+		inp = input()
+		if (inp != "quit"){
+			game.PassTurn()
+		}
+	}
+}
